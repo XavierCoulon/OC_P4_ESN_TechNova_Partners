@@ -1,13 +1,3 @@
-"""
-Encoding Utilities for Feature Engineering
-
-This module contains encoding functions for categorical and binary variables
-used in machine learning preprocessing.
-
-Created for: OC Project 4 - ESN TechNova Partners
-Author: Data Science Team
-"""
-
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
@@ -329,8 +319,6 @@ def apply_onehot_encoding(df, columns, drop_first=True, prefix=None):
 
     return df_encoded, encoding_info
 
-    return df_encoded, encoding_info
-
 
 def apply_ordinal_encoding(df, columns, ordinal_mappings=None):
     """
@@ -380,50 +368,6 @@ def apply_ordinal_encoding(df, columns, ordinal_mappings=None):
             print(f"✅ Ordinal encoded {col}: {len(mapping)} levels")
 
     return df_encoded, encoding_info
-
-
-def remove_highly_correlated_features(df, correlation_threshold=0.9):
-    """
-    Remove highly correlated features to avoid multicollinearity.
-
-    Parameters:
-    -----------
-    df : DataFrame
-        Input dataset with numerical features
-    correlation_threshold : float, default=0.9
-        Threshold for removing features
-
-    Returns:
-    --------
-    tuple
-        (df_reduced, removed_features)
-        - df_reduced: DataFrame with highly correlated features removed
-        - removed_features: List of removed feature names
-
-    Example:
-    --------
-    >>> df_clean, removed = remove_highly_correlated_features(df, threshold=0.85)
-    >>> print(f"Removed {len(removed)} highly correlated features")
-    """
-    # Calculate correlation matrix
-    corr_matrix = df.corr().abs()
-
-    # Find highly correlated feature pairs
-    upper_triangle = corr_matrix.where(
-        np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
-    )
-
-    # Identify features to remove
-    to_remove = [
-        column
-        for column in upper_triangle.columns
-        if any(upper_triangle[column] > correlation_threshold)
-    ]
-
-    # Remove features
-    df_reduced = df.drop(columns=to_remove)
-
-    return df_reduced, to_remove
 
 
 # Version info
@@ -602,12 +546,312 @@ def print_feature_engineering_summary(
     print("\n" + "=" * 60)
 
 
-# Constants and configuration
-DEFAULT_TARGET_VARIABLE = "a_quitte_l_entreprise"
-DEFAULT_CORRELATION_THRESHOLD = 0.9
-DEFAULT_VARIANCE_THRESHOLD = 0.0
+def compare_models(models_dict, model_names=None, display_charts=True):
+    """
+    Compare multiple machine learning models with comprehensive analysis.
 
-# Version info
-__version__ = "1.0.0"
-__author__ = "Data Science Team"
-__description__ = "Feature engineering utilities for employee turnover prediction"
+    Parameters:
+    -----------
+    models_dict : dict
+        Dictionary with model results in format:
+        {
+            'model_name': {
+                'train': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float},
+                'test': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float}
+            }
+        }
+    model_names : list, optional
+        Custom names for models. If None, uses keys from models_dict
+    display_charts : bool, default=True
+        Whether to display comparison charts
+
+    Returns:
+    --------
+    dict
+        Dictionary containing:
+        - comparison_train: DataFrame with training metrics
+        - comparison_test: DataFrame with test metrics
+        - best_model: Name of best performing model (by test F1-score)
+        - overfitting_analysis: DataFrame with overfitting analysis
+
+    Example:
+    --------
+    >>> results = {
+    ...     'Logistic Regression': {
+    ...         'train': {'accuracy': 0.85, 'precision': 0.84, 'recall': 0.85, 'f1_score': 0.84},
+    ...         'test': {'accuracy': 0.82, 'precision': 0.81, 'recall': 0.82, 'f1_score': 0.81}
+    ...     },
+    ...     'Random Forest': {
+    ...         'train': {'accuracy': 0.88, 'precision': 0.87, 'recall': 0.88, 'f1_score': 0.87},
+    ...         'test': {'accuracy': 0.85, 'precision': 0.84, 'recall': 0.85, 'f1_score': 0.84}
+    ...     }
+    ... }
+    >>> comparison = compare_models(results)
+    """
+
+    if model_names is None:
+        model_names = list(models_dict.keys())
+
+    print("MODEL COMPARISON SUMMARY:")
+    print("=" * 60)
+
+    # Create comparison dataframes
+    train_data = []
+    test_data = []
+
+    for model_name in model_names:
+        if model_name in models_dict:
+            # Training metrics
+            train_metrics = models_dict[model_name]["train"]
+            train_data.append(
+                [
+                    model_name,
+                    train_metrics["accuracy"],
+                    train_metrics["precision"],
+                    train_metrics["recall"],
+                    train_metrics["f1_score"],
+                ]
+            )
+
+            # Test metrics
+            test_metrics = models_dict[model_name]["test"]
+            test_data.append(
+                [
+                    model_name,
+                    test_metrics["accuracy"],
+                    test_metrics["precision"],
+                    test_metrics["recall"],
+                    test_metrics["f1_score"],
+                ]
+            )
+
+    # Create DataFrames
+    columns = ["Model", "Accuracy", "Precision", "Recall", "F1-Score"]
+    comparison_train = pd.DataFrame(train_data, columns=columns)
+    comparison_test = pd.DataFrame(test_data, columns=columns)
+
+    # Display comparison tables
+    print("📊 TRAINING SET Performance:")
+    print(comparison_train.round(4).to_string(index=False))
+
+    print(f"\n📊 TEST SET Performance:")
+    print(comparison_test.round(4).to_string(index=False))
+
+    # Overfitting analysis
+    print(f"\n🔍 OVERFITTING ANALYSIS:")
+    print(
+        f"{'Model':<25} {'Train F1':<10} {'Test F1':<10} {'Difference':<12} {'Status'}"
+    )
+    print("-" * 70)
+
+    overfitting_data = []
+    for i, model_name in enumerate(model_names):
+        if model_name in models_dict:
+            # Use iloc to get numeric values directly
+            train_f1_val = comparison_train.iloc[i]["F1-Score"]
+            test_f1_val = comparison_test.iloc[i]["F1-Score"]
+
+            # Ensure we have numeric values
+            train_f1 = float(train_f1_val) if pd.notna(train_f1_val) else 0.0
+            test_f1 = float(test_f1_val) if pd.notna(test_f1_val) else 0.0
+            diff = train_f1 - test_f1
+
+            if abs(diff) < 0.01:
+                status = "✅ Excellent"
+            elif diff > 0.10:
+                status = "🚨 High overfitting"
+            elif diff > 0.05:
+                status = "⚠️ Moderate overfitting"
+            elif diff > 0.02:
+                status = "⚡ Minor overfitting"
+            else:
+                status = "ℹ️ Normal"
+
+            print(
+                f"{model_name:<25} {train_f1:<10.4f} {test_f1:<10.4f} {diff:<12.4f} {status}"
+            )
+            overfitting_data.append(
+                {
+                    "Model": model_name,
+                    "Train_F1": train_f1,
+                    "Test_F1": test_f1,
+                    "Difference": diff,
+                    "Status": status,
+                }
+            )
+
+    overfitting_df = pd.DataFrame(overfitting_data)
+
+    # Find best model
+    best_model_idx = comparison_test["F1-Score"].idxmax()
+    best_model = comparison_test.loc[best_model_idx, "Model"]
+    best_f1 = comparison_test.loc[best_model_idx, "F1-Score"]
+
+    print(f"\n🏆 BEST MODEL: {best_model}")
+    print(f"   Test F1-Score: {best_f1:.4f}")
+
+    # Baseline comparison (assumes first model is baseline)
+    if len(comparison_test) > 1:
+        baseline_f1_val = comparison_test.iloc[0]["F1-Score"]
+        baseline_f1 = float(baseline_f1_val) if pd.notna(baseline_f1_val) else 0.0
+        print(f"\n📈 Improvements over baseline (Test Set):")
+        for idx in range(len(comparison_test)):
+            if idx > 0:  # Skip baseline
+                row = comparison_test.iloc[idx]
+                improvement = float(row["F1-Score"]) - baseline_f1
+                improvement_pct = (
+                    (improvement / baseline_f1) * 100 if baseline_f1 > 0 else 0
+                )
+                print(f"   {row['Model']}: +{improvement:.4f} ({improvement_pct:.1f}%)")
+
+    # Generate visualization if requested
+    if display_charts:
+        _create_model_comparison_charts(comparison_train, comparison_test, model_names)
+
+    print(f"\n🎯 Model comparison completed!")
+
+    return {
+        "comparison_train": comparison_train,
+        "comparison_test": comparison_test,
+        "best_model": best_model,
+        "overfitting_analysis": overfitting_df,
+    }
+
+
+def _create_model_comparison_charts(comparison_train, comparison_test, model_names):
+    """
+    Create visualization charts for model comparison.
+
+    Parameters:
+    -----------
+    comparison_train : DataFrame
+        Training metrics comparison
+    comparison_test : DataFrame
+        Test metrics comparison
+    model_names : list
+        List of model names
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+
+    plt.figure(figsize=(15, 10))
+
+    # Create short names for better visualization
+    model_names_short = [
+        name.split("(")[0].strip() if "(" in name else name[:10] for name in model_names
+    ]
+
+    # Subplot 1: Training vs Test F1-Score
+    plt.subplot(2, 3, 1)
+    train_f1_scores = comparison_train["F1-Score"]
+    test_f1_scores = comparison_test["F1-Score"]
+
+    x = np.arange(len(model_names_short))
+    width = 0.35
+
+    bars1 = plt.bar(
+        x - width / 2,
+        train_f1_scores,
+        width,
+        label="Training",
+        alpha=0.8,
+        color="skyblue",
+    )
+    bars2 = plt.bar(
+        x + width / 2, test_f1_scores, width, label="Test", alpha=0.8, color="orange"
+    )
+
+    plt.ylabel("F1-Score")
+    plt.title("Training vs Test F1-Score")
+    plt.xticks(x, model_names_short, rotation=45)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Add value labels on bars
+    for bars in [bars1, bars2]:
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(
+                bar.get_x() + bar.get_width() / 2.0,
+                height + 0.005,
+                f"{height:.3f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+            )
+
+    # Subplot 2: All metrics comparison (Test Set)
+    plt.subplot(2, 3, 2)
+    metrics = ["Accuracy", "Precision", "Recall", "F1-Score"]
+    x_metrics = np.arange(len(metrics))
+    width_metrics = 0.25
+
+    colors = ["red", "orange", "green", "blue", "purple"][: len(model_names)]
+    for i, model in enumerate(comparison_test["Model"]):
+        values = [comparison_test.loc[i, metric] for metric in metrics]
+        plt.bar(
+            x_metrics + i * width_metrics,
+            values,
+            width_metrics,
+            label=model_names_short[i],
+            alpha=0.8,
+            color=colors[i],
+        )
+
+    plt.xlabel("Metrics")
+    plt.ylabel("Score")
+    plt.title("All Metrics Comparison (Test Set)")
+    plt.xticks(x_metrics + width_metrics, metrics, rotation=45)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Subplot 3: Overfitting visualization
+    plt.subplot(2, 3, 3)
+    overfitting_diffs = [
+        comparison_train.loc[i, "F1-Score"] - comparison_test.loc[i, "F1-Score"]
+        for i in range(len(comparison_train))
+    ]
+
+    bars = plt.bar(
+        model_names_short,
+        overfitting_diffs,
+        alpha=0.7,
+        color=[
+            "green" if diff < 0.02 else "orange" if diff < 0.05 else "red"
+            for diff in overfitting_diffs
+        ],
+    )
+    plt.ylabel("Training - Test F1 Difference")
+    plt.title("Overfitting Analysis")
+    plt.xticks(rotation=45)
+    plt.grid(True, alpha=0.3)
+    plt.axhline(
+        y=0.02,
+        color="orange",
+        linestyle="--",
+        alpha=0.7,
+        label="Minor overfitting threshold",
+    )
+    plt.axhline(
+        y=0.05,
+        color="red",
+        linestyle="--",
+        alpha=0.7,
+        label="Moderate overfitting threshold",
+    )
+    plt.legend(fontsize=8)
+
+    # Add value labels
+    for bar, diff in zip(bars, overfitting_diffs):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.002,
+            f"{diff:.3f}",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+
+    plt.tight_layout()
+    plt.show()
