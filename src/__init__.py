@@ -10,6 +10,7 @@ from .utils import (
     apply_label_encoding,
     apply_onehot_encoding,
     apply_ordinal_encoding,
+    confusion_matrix_analysis,
 )
 
 __version__ = "1.0.0"
@@ -20,4 +21,5 @@ __all__ = [
     "apply_label_encoding",
     "apply_onehot_encoding",
     "apply_ordinal_encoding",
+    "confusion_matrix_analysis",
 ]

@@ -1,6 +1,19 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+    confusion_matrix,
+    roc_auc_score,
+    roc_curve,
+    precision_recall_curve,
+)
 
 
 # Function to analyze dataset characteristics
@@ -39,20 +52,20 @@ def identify_feature_types(df, exclude_cols=None):
     Parameters:
     -----------
     df : DataFrame
-        Input dataset
+            Input dataset
     exclude_cols : list, optional
-        Columns to exclude from analysis
+            Columns to exclude from analysis
 
     Returns:
     --------
     dict
-        Dictionary containing different feature types:
-        - numerical_continuous: Continuous numerical features
-        - numerical_discrete: Discrete numerical features
-        - categorical_ordinal: Ordinal categorical features
-        - categorical_nominal: Nominal categorical features
-        - binary: Binary features (2 unique values)
-        - id_columns: Identifier columns
+            Dictionary containing different feature types:
+            - numerical_continuous: Continuous numerical features
+            - numerical_discrete: Discrete numerical features
+            - categorical_ordinal: Ordinal categorical features
+            - categorical_nominal: Nominal categorical features
+            - binary: Binary features (2 unique values)
+            - id_columns: Identifier columns
 
     Example:
     --------
@@ -122,18 +135,18 @@ def create_correlation_matrix(df, method="pearson", threshold=0.8):
     Parameters:
     -----------
     df : DataFrame
-        Input dataset with numerical features only
+            Input dataset with numerical features only
     method : str, default='pearson'
-        Correlation method: 'pearson' or 'spearman'
+            Correlation method: 'pearson' or 'spearman'
     threshold : float, default=0.8
-        Correlation threshold for identifying high correlations
+            Correlation threshold for identifying high correlations
 
     Returns:
     --------
     tuple
-        (correlation_matrix, highly_correlated_pairs)
-        - correlation_matrix: DataFrame with correlation values
-        - highly_correlated_pairs: List of dicts with highly correlated pairs
+            (correlation_matrix, highly_correlated_pairs)
+            - correlation_matrix: DataFrame with correlation values
+            - highly_correlated_pairs: List of dicts with highly correlated pairs
 
     Example:
     --------
@@ -167,18 +180,18 @@ def apply_binary_encoding(df, columns, mapping_dict=None):
     Parameters:
     -----------
     df : DataFrame
-        Input dataset
+            Input dataset
     columns : list
-        List of columns to encode
+            List of columns to encode
     mapping_dict : dict, optional
-        Custom mapping {column: {value1: 0, value2: 1}}
+            Custom mapping {column: {value1: 0, value2: 1}}
 
     Returns:
     --------
     tuple
-        (encoded_df, encoding_info)
-        - encoded_df: DataFrame with binary encoded columns
-        - encoding_info: Dict with encoding details for each column
+            (encoded_df, encoding_info)
+            - encoded_df: DataFrame with binary encoded columns
+            - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -216,16 +229,16 @@ def apply_label_encoding(df, columns):
     Parameters:
     -----------
     df : DataFrame
-        Input dataset
+            Input dataset
     columns : list
-        List of columns to encode
+            List of columns to encode
 
     Returns:
     --------
     tuple
-        (encoded_df, encoding_info)
-        - encoded_df: DataFrame with label encoded columns
-        - encoding_info: Dict with encoding details for each column
+            (encoded_df, encoding_info)
+            - encoded_df: DataFrame with label encoded columns
+            - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -256,20 +269,20 @@ def apply_onehot_encoding(df, columns, drop_first=True, prefix=None):
     Parameters:
     -----------
     df : DataFrame
-        Input dataset
+            Input dataset
     columns : list
-        List of columns to encode
+            List of columns to encode
     drop_first : bool, default=True
-        Whether to drop first category to avoid multicollinearity
+            Whether to drop first category to avoid multicollinearity
     prefix : list, optional
-        Custom prefixes for each column
+            Custom prefixes for each column
 
     Returns:
     --------
     tuple
-        (encoded_df, encoding_info)
-        - encoded_df: DataFrame with one-hot encoded columns (dtype: int64)
-        - encoding_info: Dict with encoding details for each column
+            (encoded_df, encoding_info)
+            - encoded_df: DataFrame with one-hot encoded columns (dtype: int64)
+            - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -350,18 +363,18 @@ def apply_ordinal_encoding(df, columns, ordinal_mappings=None):
     Parameters:
     -----------
     df : DataFrame
-        Input dataset
+            Input dataset
     columns : list
-        List of columns to encode
+            List of columns to encode
     ordinal_mappings : dict, optional
-        Custom ordinal mappings {column: [ordered_categories]}
+            Custom ordinal mappings {column: [ordered_categories]}
 
     Returns:
     --------
     tuple
-        (encoded_df, encoding_info)
-        - encoded_df: DataFrame with ordinal encoded columns
-        - encoding_info: Dict with encoding details for each column
+            (encoded_df, encoding_info)
+            - encoded_df: DataFrame with ordinal encoded columns
+            - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -406,18 +419,18 @@ def validate_data_quality(X, y, feature_name="X", target_name="y"):
     Parameters:
     -----------
     X : DataFrame
-        Feature matrix
+            Feature matrix
     y : Series or DataFrame
-        Target variable
+            Target variable
     feature_name : str, default="X"
-        Name for feature matrix in output
+            Name for feature matrix in output
     target_name : str, default="y"
-        Name for target variable in output
+            Name for target variable in output
 
     Returns:
     --------
     dict
-        Dictionary with validation results and recommendations
+            Dictionary with validation results and recommendations
 
     Example:
     --------
@@ -507,26 +520,26 @@ def compare_models(models_dict, model_names=None, display_charts=True):
     Parameters:
     -----------
     models_dict : dict
-        Dictionary with model results in format:
-        {
-            'model_name': {
-                'train': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float},
-                'test': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float}
+            Dictionary with model results in format:
+            {
+                    'model_name': {
+                            'train': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float},
+                            'test': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float}
+                    }
             }
-        }
     model_names : list, optional
-        Custom names for models. If None, uses keys from models_dict
+            Custom names for models. If None, uses keys from models_dict
     display_charts : bool, default=True
-        Whether to display comparison charts
+            Whether to display comparison charts
 
     Returns:
     --------
     dict
-        Dictionary containing:
-        - comparison_train: DataFrame with training metrics
-        - comparison_test: DataFrame with test metrics
-        - best_model: Name of best performing model (by test F1-score)
-        - overfitting_analysis: DataFrame with overfitting analysis
+            Dictionary containing:
+            - comparison_train: DataFrame with training metrics
+            - comparison_test: DataFrame with test metrics
+            - best_model: Name of best performing model (by test F1-score)
+            - overfitting_analysis: DataFrame with overfitting analysis
 
     Example:
     --------
@@ -679,11 +692,11 @@ def _create_model_comparison_charts(comparison_train, comparison_test, model_nam
     Parameters:
     -----------
     comparison_train : DataFrame
-        Training metrics comparison
+            Training metrics comparison
     comparison_test : DataFrame
-        Test metrics comparison
+            Test metrics comparison
     model_names : list
-        List of model names
+            List of model names
     """
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -809,3 +822,60 @@ def _create_model_comparison_charts(comparison_train, comparison_test, model_nam
 
     plt.tight_layout()
     plt.show()
+
+
+def confusion_matrix_analysis(y_true, y_pred, model_name="Model"):
+    # Confusion Matrix for Logistic Regression
+    print(f"\n=== CONFUSION MATRIX ANALYSIS for {model_name} ===")
+    print("=" * 50)
+
+    # Calculate confusion matrix
+    cm_lr = confusion_matrix(y_true, y_pred)
+    class_names = sorted(y_true.unique())
+
+    print(f"📊 Confusion Matrix:")
+    print(f"   True labels (rows) vs Predicted labels (columns)")
+    print(f"   Classes: {class_names}")
+    print()
+    print(cm_lr)
+
+    # Visualize confusion matrix
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(
+        cm_lr,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=class_names,
+        yticklabels=class_names,
+        cbar_kws={"label": "Count"},
+    )
+    plt.title("Confusion Matrix - Logistic Regression", fontsize=14, fontweight="bold")
+    plt.xlabel("Predicted Label", fontsize=12)
+    plt.ylabel("True Label", fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+    # Calculate confusion matrix metrics for each class
+    print(f"\n📈 Confusion Matrix Analysis:")
+    for i, class_name in enumerate(class_names):
+        tp = cm_lr[i, i]  # True positives
+        fn = cm_lr[i, :].sum() - tp  # False negatives
+        fp = cm_lr[:, i].sum() - tp  # False positives
+        tn = cm_lr.sum() - tp - fn - fp  # True negatives
+
+        # Class-specific metrics
+        sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0  # Recall/Sensitivity
+        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0  # Specificity
+        precision_class = tp / (tp + fp) if (tp + fp) > 0 else 0  # Precision
+
+        print(f"\n   Class {class_name}:")
+        print(f"     True Positives:  {tp}")
+        print(f"     False Positives: {fp}")
+        print(f"     False Negatives: {fn}")
+        print(f"     True Negatives:  {tn}")
+        print(f"     Sensitivity (Recall): {sensitivity:.4f}")
+        print(f"     Specificity:          {specificity:.4f}")
+        print(f"     Precision:            {precision_class:.4f}")
+
+        print(f"\n🎯 Confusion Matrix completed!")
