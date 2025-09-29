@@ -1,12 +1,35 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-import warnings
 
-warnings.filterwarnings("ignore")
-import warnings
 
-warnings.filterwarnings("ignore")
+# Function to analyze dataset characteristics
+def analyze_dataset(df, name):
+    print(f"=== {name} ANALYSIS ===")
+    print(f"Shape: {df.shape}")
+    print(f"Missing values:\n{df.isnull().sum()}")
+    print(f"Duplicates: {df.duplicated().sum()}")
+
+    # Identify quantitative and qualitative columns
+    numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=["object"]).columns.tolist()
+
+    print(f"\nQuantitative columns ({len(numerical_cols)}): {numerical_cols}")
+    print(f"Qualitative columns ({len(categorical_cols)}): {categorical_cols}")
+
+    if numerical_cols:
+        print(f"\nNumerical summary:")
+        print(df[numerical_cols].describe())
+
+    if categorical_cols:
+        print(f"\nCategorical summary:")
+        for col in categorical_cols:
+            print(f"{col}: {df[col].nunique()} unique values")
+            if df[col].nunique() <= 10:
+                print(f"  Values: {df[col].value_counts().to_dict()}")
+
+    print("=" * 50)
+    return numerical_cols, categorical_cols
 
 
 def identify_feature_types(df, exclude_cols=None):
