@@ -4,15 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report,
     confusion_matrix,
-    roc_auc_score,
-    roc_curve,
-    precision_recall_curve,
 )
 
 
@@ -43,6 +35,16 @@ def analyze_dataset(df, name):
 
     print("=" * 50)
     return numerical_cols, categorical_cols
+
+
+def detect_outliers_iqr(df, column):
+    Q1 = df[column].quantile(0.25)
+    Q3 = df[column].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    outliers = df[(df[column] < lower_bound) | (df[column] > upper_bound)]
+    return outliers, lower_bound, upper_bound
 
 
 def identify_feature_types(df, exclude_cols=None):
