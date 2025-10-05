@@ -3,9 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from sklearn.metrics import (
-    confusion_matrix,
-)
+from sklearn.metrics import confusion_matrix, classification_report
+from scipy.stats import zscore
 
 
 # Function to analyze dataset characteristics
@@ -54,20 +53,20 @@ def identify_feature_types(df, exclude_cols=None):
     Parameters:
     -----------
     df : DataFrame
-            Input dataset
+                    Input dataset
     exclude_cols : list, optional
-            Columns to exclude from analysis
+                    Columns to exclude from analysis
 
     Returns:
     --------
     dict
-            Dictionary containing different feature types:
-            - numerical_continuous: Continuous numerical features
-            - numerical_discrete: Discrete numerical features
-            - categorical_ordinal: Ordinal categorical features
-            - categorical_nominal: Nominal categorical features
-            - binary: Binary features (2 unique values)
-            - id_columns: Identifier columns
+                    Dictionary containing different feature types:
+                    - numerical_continuous: Continuous numerical features
+                    - numerical_discrete: Discrete numerical features
+                    - categorical_ordinal: Ordinal categorical features
+                    - categorical_nominal: Nominal categorical features
+                    - binary: Binary features (2 unique values)
+                    - id_columns: Identifier columns
 
     Example:
     --------
@@ -130,6 +129,32 @@ def identify_feature_types(df, exclude_cols=None):
     return feature_types
 
 
+def detect_outliers_zscore(df: pd.DataFrame, column: str, threshold: float = 3.0):
+    """
+    Détection des outliers avec la méthode Z-score.
+    Z = (x - moyenne) / écart-type
+    Tout point avec |Z| > threshold est considéré comme un outlier.
+    """
+    col_data = pd.to_numeric(df[column], errors="coerce")
+    mean = np.nanmean(col_data)
+    std = np.nanstd(col_data)
+
+    if std == 0 or np.isnan(std):
+        return pd.DataFrame(columns=[column]), pd.Series(
+            np.zeros(len(df)), index=df.index
+        )
+
+    # Calcul manuel des Z-scores → évite tout conflit de typage
+    z_scores = (col_data - float(mean)) / float(std)
+    z_scores = z_scores.abs()
+
+    # Masque des outliers
+    outlier_mask = z_scores > threshold
+    outliers = df.loc[outlier_mask, [column]]
+
+    return outliers, z_scores
+
+
 def create_correlation_matrix(df, method="pearson", threshold=0.8):
     """
     Create correlation matrix and identify highly correlated features.
@@ -137,18 +162,18 @@ def create_correlation_matrix(df, method="pearson", threshold=0.8):
     Parameters:
     -----------
     df : DataFrame
-            Input dataset with numerical features only
+                    Input dataset with numerical features only
     method : str, default='pearson'
-            Correlation method: 'pearson' or 'spearman'
+                    Correlation method: 'pearson' or 'spearman'
     threshold : float, default=0.8
-            Correlation threshold for identifying high correlations
+                    Correlation threshold for identifying high correlations
 
     Returns:
     --------
     tuple
-            (correlation_matrix, highly_correlated_pairs)
-            - correlation_matrix: DataFrame with correlation values
-            - highly_correlated_pairs: List of dicts with highly correlated pairs
+                    (correlation_matrix, highly_correlated_pairs)
+                    - correlation_matrix: DataFrame with correlation values
+                    - highly_correlated_pairs: List of dicts with highly correlated pairs
 
     Example:
     --------
@@ -172,7 +197,9 @@ def create_correlation_matrix(df, method="pearson", threshold=0.8):
                     }
                 )
 
-    return corr_matrix, highly_correlated
+    return corr_matrix, sorted(
+        highly_correlated, key=lambda x: abs(x["correlation"]), reverse=True
+    )
 
 
 def apply_binary_encoding(df, columns, mapping_dict=None):
@@ -182,18 +209,18 @@ def apply_binary_encoding(df, columns, mapping_dict=None):
     Parameters:
     -----------
     df : DataFrame
-            Input dataset
+                    Input dataset
     columns : list
-            List of columns to encode
+                    List of columns to encode
     mapping_dict : dict, optional
-            Custom mapping {column: {value1: 0, value2: 1}}
+                    Custom mapping {column: {value1: 0, value2: 1}}
 
     Returns:
     --------
     tuple
-            (encoded_df, encoding_info)
-            - encoded_df: DataFrame with binary encoded columns
-            - encoding_info: Dict with encoding details for each column
+                    (encoded_df, encoding_info)
+                    - encoded_df: DataFrame with binary encoded columns
+                    - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -231,16 +258,16 @@ def apply_label_encoding(df, columns):
     Parameters:
     -----------
     df : DataFrame
-            Input dataset
+                    Input dataset
     columns : list
-            List of columns to encode
+                    List of columns to encode
 
     Returns:
     --------
     tuple
-            (encoded_df, encoding_info)
-            - encoded_df: DataFrame with label encoded columns
-            - encoding_info: Dict with encoding details for each column
+                    (encoded_df, encoding_info)
+                    - encoded_df: DataFrame with label encoded columns
+                    - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -271,20 +298,20 @@ def apply_onehot_encoding(df, columns, drop_first=True, prefix=None):
     Parameters:
     -----------
     df : DataFrame
-            Input dataset
+                    Input dataset
     columns : list
-            List of columns to encode
+                    List of columns to encode
     drop_first : bool, default=True
-            Whether to drop first category to avoid multicollinearity
+                    Whether to drop first category to avoid multicollinearity
     prefix : list, optional
-            Custom prefixes for each column
+                    Custom prefixes for each column
 
     Returns:
     --------
     tuple
-            (encoded_df, encoding_info)
-            - encoded_df: DataFrame with one-hot encoded columns (dtype: int64)
-            - encoding_info: Dict with encoding details for each column
+                    (encoded_df, encoding_info)
+                    - encoded_df: DataFrame with one-hot encoded columns (dtype: int64)
+                    - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -365,18 +392,18 @@ def apply_ordinal_encoding(df, columns, ordinal_mappings=None):
     Parameters:
     -----------
     df : DataFrame
-            Input dataset
+                    Input dataset
     columns : list
-            List of columns to encode
+                    List of columns to encode
     ordinal_mappings : dict, optional
-            Custom ordinal mappings {column: [ordered_categories]}
+                    Custom ordinal mappings {column: [ordered_categories]}
 
     Returns:
     --------
     tuple
-            (encoded_df, encoding_info)
-            - encoded_df: DataFrame with ordinal encoded columns
-            - encoding_info: Dict with encoding details for each column
+                    (encoded_df, encoding_info)
+                    - encoded_df: DataFrame with ordinal encoded columns
+                    - encoding_info: Dict with encoding details for each column
 
     Example:
     --------
@@ -408,111 +435,71 @@ def apply_ordinal_encoding(df, columns, ordinal_mappings=None):
     return df_encoded, encoding_info
 
 
-# Version info
-__version__ = "1.0.0"
-__author__ = "Data Science Team"
-__description__ = "Encoding utilities for categorical feature preprocessing"
-
-
-def validate_data_quality(X, y, feature_name="X", target_name="y"):
+def analyze_feature_scaling(X, numerical_cols=None, verbose=True):
     """
-    Comprehensive data quality validation for ML datasets.
+    Analyse les échelles des features numériques pour vérifier la nécessité d'un scaling.
 
-    Parameters:
-    -----------
-    X : DataFrame
-            Feature matrix
-    y : Series or DataFrame
-            Target variable
-    feature_name : str, default="X"
-            Name for feature matrix in output
-    target_name : str, default="y"
-            Name for target variable in output
+    Parameters
+    ----------
+    X : pd.DataFrame
+            DataFrame contenant les features.
+    numerical_cols : list, optional
+            Liste des colonnes numériques à analyser. Si None, toutes les colonnes numériques sont utilisées.
+    verbose : bool
+            Si True, affiche le rapport complet.
 
-    Returns:
-    --------
-    dict
-            Dictionary with validation results and recommendations
-
-    Example:
-    --------
-    >>> validation_results = validate_data_quality(X, y)
-    >>> if validation_results['passed']:
-    ...     print("Data quality validation passed!")
+    Returns
+    -------
+    scale_info : dict
+            Dictionnaire contenant les statistiques des features et recommandations de scaling.
     """
-    validation_results = {"passed": True, "issues": [], "warnings": [], "summary": {}}
+    if numerical_cols is None:
+        numerical_cols = X.select_dtypes(include=[float, int]).columns.tolist()
 
-    # Check for missing values
-    X_missing = X.isnull().sum().sum()
-    y_missing = y.isnull().sum() if hasattr(y, "isnull") else 0
+    if verbose:
+        print("FEATURE SCALING ANALYSIS:")
+        print("=" * 50)
+        print(f"Numerical features: {len(numerical_cols)}")
 
-    validation_results["summary"]["missing_values"] = {
-        feature_name: X_missing,
-        target_name: y_missing,
-    }
+    # Stats descriptives
+    feature_stats = X[numerical_cols].describe()
+    if verbose:
+        print("\n📊 Key Feature Statistics:")
+        print(feature_stats.loc[["mean", "std", "min", "max"]].round(2))
 
-    if X_missing > 0 or y_missing > 0:
-        validation_results["passed"] = False
-        validation_results["issues"].append(
-            f"Missing values found: {feature_name}={X_missing}, {target_name}={y_missing}"
+    # Analyse des échelles
+    means = X[numerical_cols].mean()
+    stds = X[numerical_cols].std()
+    scale_ratio = means.max() / means.min() if means.min() > 0 else float("inf")
+
+    if verbose:
+        print(f"\n🔍 Scale Analysis:")
+        print(f"   Range of means: {means.min():.2f} to {means.max():.2f}")
+        print(f"   Range of stds:  {stds.min():.2f} to {stds.max():.2f}")
+        print(f"   Mean scale ratio: {scale_ratio:.1f}")
+
+    recommendation = (
+        "StandardScaler RECOMMENDED" if scale_ratio > 10 else "StandardScaler optional"
+    )
+
+    if verbose:
+        print(
+            f"   ✅ {recommendation} - significant scale differences detected"
+            if scale_ratio > 10
+            else f"   ℹ️  {recommendation} - scales are relatively similar"
+        )
+        print("\n💡 Logistic Regression is sensitive to feature scales.")
+        print(
+            "   StandardScaler will help with convergence and coefficient interpretation."
         )
 
-    # Check data types
-    numerical_features = len(X.select_dtypes(include=[np.number]).columns)
-    categorical_features = len(X.select_dtypes(exclude=[np.number]).columns)
-
-    validation_results["summary"]["feature_types"] = {
-        "numerical": numerical_features,
-        "categorical": categorical_features,
-        "total": X.shape[1],
+    return {
+        "feature_stats": feature_stats,
+        "means": means,
+        "stds": stds,
+        "scale_ratio": scale_ratio,
+        "recommendation": recommendation,
     }
-
-    # Check for infinite values
-    if np.isinf(X.select_dtypes(include=[np.number])).any().any():
-        validation_results["passed"] = False
-        validation_results["issues"].append("Infinite values found in feature matrix")
-
-    # Check feature variability
-    zero_variance_features = []
-    for col in X.select_dtypes(include=[np.number]).columns:
-        if X[col].var() == 0:
-            zero_variance_features.append(col)
-
-    if zero_variance_features:
-        validation_results["passed"] = False
-        validation_results["issues"].append(
-            f"Zero variance features: {zero_variance_features}"
-        )
-
-    # Target variable analysis
-    if hasattr(y, "nunique"):
-        target_unique = y.nunique()
-        target_distribution = y.value_counts(normalize=True).to_dict()
-    else:
-        target_unique = len(np.unique(y))
-        unique_vals, counts = np.unique(y, return_counts=True)
-        target_distribution = {
-            val: count / len(y) for val, count in zip(unique_vals, counts)
-        }
-
-    validation_results["summary"]["target_analysis"] = {
-        "unique_values": target_unique,
-        "distribution": target_distribution,
-    }
-
-    # Check for class imbalance (for classification)
-    if target_unique <= 10:  # Likely classification
-        min_class_proportion = min(target_distribution.values())
-        if min_class_proportion < 0.05:  # Less than 5%
-            validation_results["warnings"].append(
-                f"Severe class imbalance detected: minimum class = {min_class_proportion:.1%}"
-            )
-        elif min_class_proportion < 0.1:  # Less than 10%
-            validation_results["warnings"].append(
-                f"Class imbalance detected: minimum class = {min_class_proportion:.1%}"
-            )
-
-    return validation_results
 
 
 def compare_models(models_dict, model_names=None, display_charts=True):
@@ -522,26 +509,26 @@ def compare_models(models_dict, model_names=None, display_charts=True):
     Parameters:
     -----------
     models_dict : dict
-            Dictionary with model results in format:
-            {
-                    'model_name': {
-                            'train': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float},
-                            'test': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float}
+                    Dictionary with model results in format:
+                    {
+                                    'model_name': {
+                                                    'train': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float},
+                                                    'test': {'accuracy': float, 'precision': float, 'recall': float, 'f1_score': float}
+                                    }
                     }
-            }
     model_names : list, optional
-            Custom names for models. If None, uses keys from models_dict
+                    Custom names for models. If None, uses keys from models_dict
     display_charts : bool, default=True
-            Whether to display comparison charts
+                    Whether to display comparison charts
 
     Returns:
     --------
     dict
-            Dictionary containing:
-            - comparison_train: DataFrame with training metrics
-            - comparison_test: DataFrame with test metrics
-            - best_model: Name of best performing model (by test F1-score)
-            - overfitting_analysis: DataFrame with overfitting analysis
+                    Dictionary containing:
+                    - comparison_train: DataFrame with training metrics
+                    - comparison_test: DataFrame with test metrics
+                    - best_model: Name of best performing model (by test F1-score)
+                    - overfitting_analysis: DataFrame with overfitting analysis
 
     Example:
     --------
@@ -687,6 +674,48 @@ def compare_models(models_dict, model_names=None, display_charts=True):
     }
 
 
+def get_classification_report_table(y_true, y_pred, model_name="Model"):
+    """
+    Create a nicely formatted classification report as a pandas DataFrame table.
+
+    Parameters:
+    y_true: True labels
+    y_pred: Predicted labels
+    model_name: Name of the model for display (used in the DataFrame name attribute)
+
+    Returns:
+    pd.DataFrame: Formatted classification report table
+    """
+    # Convert classification report to DataFrame for better formatting
+    report_dict = classification_report(y_true, y_pred, output_dict=True)
+    report_df = pd.DataFrame(report_dict).transpose()
+
+    # Round values for better display
+    report_df = report_df.round(4)
+
+    # Remove the Support column and rename remaining columns for clarity
+    report_df = report_df.drop("support", axis=1)
+    report_df.columns = ["Precision", "Recall", "F1-Score"]
+
+    # Create more descriptive index
+    index_mapping = {
+        "0": "Class 0 (Stayed)",
+        "1": "Class 1 (Left)",
+        "accuracy": "Accuracy",
+        "macro avg": "Macro Average",
+        "weighted avg": "Weighted Average",
+    }
+
+    report_df.index = pd.Index(
+        [index_mapping.get(str(idx), str(idx)) for idx in report_df.index]
+    )
+
+    # Add model name as DataFrame name for reference
+    report_df.name = f"Classification Report - {model_name}"
+
+    return report_df
+
+
 def _create_model_comparison_charts(comparison_train, comparison_test, model_names):
     """
     Create visualization charts for model comparison.
@@ -694,11 +723,11 @@ def _create_model_comparison_charts(comparison_train, comparison_test, model_nam
     Parameters:
     -----------
     comparison_train : DataFrame
-            Training metrics comparison
+                    Training metrics comparison
     comparison_test : DataFrame
-            Test metrics comparison
+                    Test metrics comparison
     model_names : list
-            List of model names
+                    List of model names
     """
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -852,7 +881,7 @@ def confusion_matrix_analysis(y_true, y_pred, model_name="Model"):
         yticklabels=class_names,
         cbar_kws={"label": "Count"},
     )
-    plt.title("Confusion Matrix - Logistic Regression", fontsize=14, fontweight="bold")
+    plt.title(f"Confusion Matrix - {model_name}", fontsize=14, fontweight="bold")
     plt.xlabel("Predicted Label", fontsize=12)
     plt.ylabel("True Label", fontsize=12)
     plt.tight_layout()
@@ -880,4 +909,4 @@ def confusion_matrix_analysis(y_true, y_pred, model_name="Model"):
         print(f"     Specificity:          {specificity:.4f}")
         print(f"     Precision:            {precision_class:.4f}")
 
-        print(f"\n🎯 Confusion Matrix completed!")
+    print(f"\n🎯 Confusion Matrix completed!")
