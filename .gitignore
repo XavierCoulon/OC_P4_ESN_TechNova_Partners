@@ -8,3 +8,26 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Ignore data folders and their contents
+data/raw/*
+data/processed/*
+data/interim/*
+data/external/*
+
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/interim/.gitkeep
+!data/external/.gitkeep
+
+# Ignore common data file types
+*.csv
+*.xlsx
+*.parquet
+*.json
+*.pickle
+*.pkl
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
