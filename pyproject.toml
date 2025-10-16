@@ -6,8 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "imbalanced-learn>=0.14.0",
+    "ipykernel>=7.0.0",
     "matplotlib>=3.10.6",
     "numpy>=2.3.3",
+    "oc-p4-encoders",
     "pandas>=2.3.2",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.2",
@@ -25,5 +27,9 @@ dev = [
 [tool.deptry]
 known_first_party = ["src"]
 ignore_notebooks = false
+
+[tool.uv.sources]
+# Encoding functions stored in a separate repository / package
+oc-p4-encoders = { git = "https://github.com/XavierCoulon/OC_P4_encoders.git" }
 
 
